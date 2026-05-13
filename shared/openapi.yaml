@@ -1,0 +1,137 @@
+openapi: 3.0.3
+info:
+  title: CareerHubV2 API
+  description: API for searching and viewing job listings in CareerHubV2.
+  version: 1.0.0
+servers:
+  - url: /api/v1
+    description: v1 API root
+
+components:
+  securitySchemes:
+    EntraID:
+      type: oauth2
+      flows:
+        implicit:
+          authorizationUrl: https://login.microsoftonline.com/common/oauth2/v2.0/authorize
+          scopes:
+            openid: Access openid
+            profile: Access profile
+
+  schemas:
+    Job:
+      type: object
+      properties:
+        id:
+          type: string
+        job_title:
+          type: string
+        company_name:
+          type: string
+        category:
+          type: string
+        job_type:
+          type: string
+        has_salary:
+          type: boolean
+        salary_min:
+          type: number
+        salary_max:
+          type: number
+        deadline:
+          type: string
+          format: date
+        location:
+          type: string
+        position_count:
+          type: integer
+        job_description:
+          type: string
+        responsibilities:
+          type: string
+        requirements:
+          type: string
+        additional_information:
+          type: string
+        how_to_apply:
+          type: string
+
+    JobSummary:
+      type: object
+      properties:
+        id:
+          type: string
+        job_title:
+          type: string
+        company_name:
+          type: string
+        category:
+          type: string
+        job_type:
+          type: string
+        location:
+          type: string
+        deadline:
+          type: string
+          format: date
+
+paths:
+  /jobs:
+    get:
+      summary: List all jobs
+      security:
+        - EntraID: []
+      parameters:
+        - name: category
+          in: query
+          schema:
+            type: string
+        - name: job_type
+          in: query
+          schema:
+            type: string
+        - name: location
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: A list of jobs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/JobSummary'
+        '401':
+          description: Unauthorized
+
+  /jobs/{id}:
+    get:
+      summary: Get job details
+      security:
+        - EntraID: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Job details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Job'
+        '404':
+          description: Job not found
+        '401':
+          description: Unauthorized
+
+  /health:
+    get:
+      summary: Health check
+      responses:
+        '200':
+          description: OK

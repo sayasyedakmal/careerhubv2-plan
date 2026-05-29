@@ -1,60 +1,42 @@
 openapi: 3.0.3
 info:
   title: CareerHubV2 API
-  description: API for searching and viewing job listings in CareerHubV2.
-  version: 1.0.0
+  description: API for searching, viewing, and managing job listings, categories, users, and roles in CareerHubV2. Optimized to support responsive, high-fidelity layouts.
+  version: 1.2.0
 servers:
   - url: /api/v1
     description: v1 API root
 
 components:
   securitySchemes:
-    EntraID:
-      type: oauth2
-      flows:
-        implicit:
-          authorizationUrl: https://login.microsoftonline.com/common/oauth2/v2.0/authorize
-          scopes:
-            openid: Access openid
-            profile: Access profile
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
 
   schemas:
-    Job:
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+          description: A human-readable error message.
+        code:
+          type: integer
+          description: The HTTP status code.
+
+    Category:
       type: object
       properties:
         id:
           type: string
-        job_title:
+          description: Unique category identifier.
+        name:
           type: string
-        company_name:
+          description: Display name of the category (e.g., Computing, Engineering).
+        icon_name:
           type: string
-        category:
-          type: string
-        job_type:
-          type: string
-        has_salary:
-          type: boolean
-        salary_min:
-          type: number
-        salary_max:
-          type: number
-        deadline:
-          type: string
-          format: date
-        location:
-          type: string
-        position_count:
-          type: integer
-        job_description:
-          type: string
-        responsibilities:
-          type: string
-        requirements:
-          type: string
-        additional_information:
-          type: string
-        how_to_apply:
-          type: string
+          description: Heroicon name to render on the category card block.
 
     JobSummary:
       type: object
@@ -65,52 +47,263 @@ components:
           type: string
         company_name:
           type: string
-        category:
+        category_id:
+          type: string
+        category_name:
+          type: string
+        job_type:
+          type: string
+          description: e.g., Full-time, Part-time, Internship, Contract.
+        location:
+          type: string
+        location_type:
+          type: string
+          description: e.g., Onsite, Remote, Hybrid.
+        experience_level:
+          type: string
+          description: e.g., Junior, Mid, Senior.
+        salary_min:
+          type: number
+        salary_max:
+          type: number
+        deadline:
+          type: string
+          format: date
+        is_active:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+          description: Published/Created timestamp.
+
+    Job:
+      type: object
+      properties:
+        id:
+          type: string
+        job_title:
+          type: string
+        company_name:
+          type: string
+        category_id:
+          type: string
+        category_name:
           type: string
         job_type:
           type: string
         location:
           type: string
+        location_type:
+          type: string
+        experience_level:
+          type: string
+        has_salary:
+          type: boolean
+        salary_min:
+          type: number
+        salary_max:
+          type: number
         deadline:
           type: string
           format: date
+        position_count:
+          type: integer
+        # Structured Markdown segments corresponding to designed job-detail page tabs
+        job_description:
+          type: string
+          description: Body content mapped to the "Details" tab.
+        responsibilities:
+          type: string
+          description: Bulleted responsibilities mapped to the "Details/Overview" tab.
+        requirements:
+          type: string
+          description: Qualifications list mapped to the "Requirements" tab.
+        additional_information:
+          type: string
+          description: Extra metadata (e.g., work hours, dress code) mapped to the "Overview" tab.
+        how_to_apply:
+          type: string
+          description: Dynamic actions/panels mapped to the "Apply" tab.
+        is_active:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+        email:
+          type: string
+        display_name:
+          type: string
+        phone:
+          type: string
+        user_type:
+          type: string
+          description: ActiveStudent, Alumni, Staff, SystemAdmin
+        registration_status:
+          type: string
+          description: Pending, Approved, Denied, N/A
+        # Fields added specifically for Student Namecard Design B/B1 layouts
+        student_id:
+          type: string
+          nullable: true
+        major:
+          type: string
+          description: e.g., Bachelor of Computer Science (Hons)
+          nullable: true
+        namecard_style:
+          type: string
+          description: e.g., Design_B, Design_B1
+          nullable: true
+
+  responses:
+    BadRequest:
+      description: Bad Request (Missing parameters or invalid payload)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Unauthorized:
+      description: Unauthorized (Token is missing, invalid, or expired - triggers custom 401 Home view)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Forbidden:
+      description: Forbidden (User lacks necessary RBAC privileges - triggers custom 403 screen)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    NotFound:
+      description: Not Found (Requested item does not exist - triggers custom 404 screen)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    TooManyRequests:
+      description: Too Many Requests (Rate limit exceeded - triggers custom 429 screen)
+      headers:
+        Retry-After:
+          description: Time to wait in seconds before making a new request.
+          schema:
+            type: integer
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    InternalServerError:
+      description: Internal Server Error (Server crash or query failure - triggers custom 500 screen)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
 
 paths:
-  /jobs:
-    get:
-      summary: List all jobs
-      security:
-        - EntraID: []
-      parameters:
-        - name: category
-          in: query
-          schema:
-            type: string
-        - name: job_type
-          in: query
-          schema:
-            type: string
-        - name: location
-          in: query
-          schema:
-            type: string
+  /auth/login/microsoft:
+    post:
+      summary: Login using Microsoft Entra ID token
       responses:
         '200':
-          description: A list of jobs
+          description: Returns local JWT (Access + Refresh token)
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/login:
+    post:
+      summary: Login using Email/Password (for Alumni)
+      responses:
+        '200':
+          description: Returns local JWT (Access + Refresh token)
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/refresh:
+    post:
+      summary: Refresh Access Token using Refresh Token
+      responses:
+        '200':
+          description: Returns new local JWT (Access + Refresh token)
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/register:
+    post:
+      summary: Register Alumni
+      responses:
+        '201':
+          description: Registration pending
+
+  /auth/password-reset:
+    post:
+      summary: Request password reset link
+      responses:
+        '200':
+          description: Email sent
+
+  /auth/password-change:
+    post:
+      summary: Complete password setup/reset
+      responses:
+        '200':
+          description: Password updated successfully
+
+  /users/me:
+    get:
+      summary: Get my profile (including Namecard metadata)
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: User profile and Namecard assets
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    put:
+      summary: Update my profile
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: User profile updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /categories:
+    get:
+      summary: Get list of all job categories
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: A list of job categories for the directory dashboard
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/JobSummary'
+                  $ref: '#/components/schemas/Category'
         '401':
-          description: Unauthorized
+          $ref: '#/components/responses/Unauthorized'
 
-  /jobs/{id}:
-    get:
-      summary: Get job details
+  /admin/registrations/{id}/approve:
+    post:
+      summary: Approve alumni registration (SAC only)
       security:
-        - EntraID: []
+        - BearerAuth: []
       parameters:
         - name: id
           in: path
@@ -119,15 +312,257 @@ paths:
             type: string
       responses:
         '200':
-          description: Job details
+          description: Approved
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /admin/registrations/{id}/deny:
+    post:
+      summary: Deny alumni registration (SAC only)
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Denied
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /jobs:
+    get:
+      summary: List all jobs (with query arguments mapping to the Filter modals)
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+        - name: search
+          in: query
+          description: Keyword search across title and description
+          schema:
+            type: string
+        - name: category_id
+          in: query
+          description: Filter by precise Category identifier
+          schema:
+            type: string
+        - name: job_type
+          in: query
+          description: e.g., Full-time, Part-time, Internship
+          schema:
+            type: string
+        - name: location_type
+          in: query
+          description: e.g., Onsite, Remote, Hybrid
+          schema:
+            type: string
+        - name: experience_level
+          in: query
+          description: e.g., Junior, Mid, Senior
+          schema:
+            type: string
+        - name: salary_min
+          in: query
+          schema:
+            type: number
+        - name: salary_max
+          in: query
+          schema:
+            type: number
+      responses:
+        '200':
+          description: A list of jobs matching filters. An empty collection (200 OK with empty array) triggers the "No results" dashboard graphics.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/JobSummary'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    post:
+      summary: Create job posting (SAC only)
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Job'
+      responses:
+        '201':
+          description: Created
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /jobs/{id}:
+    get:
+      summary: Get job details (tab segmented metadata)
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Job details loaded (Overview, Requirements, Details, Apply tabs content)
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Job'
-        '404':
-          description: Job not found
         '401':
-          description: Unauthorized
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    put:
+      summary: Update job posting (SAC only)
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Job'
+      responses:
+        '200':
+          description: Updated
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      summary: Delete job posting (SAC only)
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Deleted
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+          
+  /jobs/{id}/status:
+    patch:
+      summary: Toggle active/inactive job posting (SAC only)
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Status toggled
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /admin/roles:
+    get:
+      summary: List roles (System Admin only)
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Roles list
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      summary: Create role (System Admin only)
+      security:
+        - BearerAuth: []
+      responses:
+        '201':
+          description: Role created
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /admin/users/{id}/roles:
+    put:
+      summary: Assign user to role (System Admin only)
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Assigned
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
 
   /health:
     get:

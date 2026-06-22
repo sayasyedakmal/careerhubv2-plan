@@ -44,7 +44,6 @@ sequenceDiagram
     F-->>U: Logs User In (Stores Local JWT)
     end
 ```
-```
 
 - **Access Token Expiration:** 15 minutes (Best practice for short-lived access).
 - **Refresh Token Expiration:** 7 days (Allows users to stay logged in without frequent re-authentication).

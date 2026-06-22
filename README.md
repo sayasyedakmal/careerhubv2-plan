@@ -20,7 +20,7 @@ The frontend user experience maps directly to high-fidelity mobile and desktop d
     *   **All Categories Directory** page.
     *   Advanced **multi-step filter** workflows.
     *   Interactive, tabbed **Job Detail view** split into `Overview`, `Requirements`, `Details`, and `Apply`.
-    *   Student Profile page utilizing the custom digital **Namecard Widget** (Design B/B1 format).
+    *   Student Profile page (featuring the custom frontend-managed digital **Namecard Widget**, Design B/B1 format).
     *   Mobile drawer navigators and logout dialog modals.
 3.  **Department Portals**:
     *   **SAC Dashboard** & Your Profile page.

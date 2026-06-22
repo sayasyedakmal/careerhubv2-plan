@@ -61,7 +61,7 @@ This document breaks down the development of the CareerHubV2 MVP into a 5-week s
 ---
 
 ## Week 4: Profiles, Modals & Error Boundary Views
-**Goal:** Profile Namecards, administrative forms, logout confirmations, and custom HTTP error status pages.
+**Goal:** User Profiles, administrative forms, logout confirmations, and custom HTTP error status pages.
 
 ### Backend Developer
 - [ ] Implement SMTP notification mailers for Alumni approval/rejection.
@@ -70,7 +70,7 @@ This document breaks down the development of the CareerHubV2 MVP into a 5-week s
 - [ ] Configure global recovery middleware to catch panic states and return standardized JSON 500 formats.
 
 ### Frontend Developer
-- [ ] Build the User Profile page incorporating the dynamic Student **Namecard** card widget (Design B/B1 format).
+- [ ] Build the User Profile page (including visual presentation card widget layouts like Design B/B1 format, handled independently on the frontend).
 - [ ] Create the **Logout Confirmation Modal Popup** overlay.
 - [ ] Implement global error pages mapping strictly to designed assets:
     *   `403 Unauthorized / Forbidden`

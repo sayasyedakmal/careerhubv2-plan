@@ -63,7 +63,7 @@ Based on the design deliverables under `frontend/design/`, the following screens
 *   **Files**: `Your Profile page.png`, `Namecard_Design B.png`, `Namecard_Design B1.png`
 *   **Implementation**:
     *   Implement user details editing forms.
-    *   Render the student **Namecard** card widget. This card behaves as a digital badge, styled with custom colors, showcasing student major, ID, registration status, and profile photo.
+    *   Render the student **Namecard** card widget. This card behaves as a digital badge, styled with custom colors, showcasing student major, ID, registration status, and profile photo. Note: The Namecard visual styles and logic are handled entirely independently on the frontend without backend API dependencies.
 
 ### E. Portal Dashboards
 *   **SAC Portal**:

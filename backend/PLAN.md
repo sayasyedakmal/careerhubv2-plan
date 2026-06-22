@@ -24,7 +24,7 @@ The database schema must support the rich, responsive attributes defined in the 
     *   `name` (Computing, Engineering, Business, etc.)
     *   `icon_name` (string mapping to Heroicons)
 *   **Users & Profiles**:
-    *   Support dynamic details (Full Name, Student ID, Email, Phone Number, Password) linked to a digital badge or Student Namecard profile component.
+    *   Support dynamic details (Full Name, Student ID, Email, Phone Number, Password) linked to the student profile view.
 *   **AuditLogs**: Audit trail tracking administrative/approval operations.
 
 ---
@@ -60,7 +60,9 @@ To power the multi-step filter pages (`Filter feature` steps 1-3) on the fronten
 
 ## 5. Security, Rate Limiting & Error Handling Middleware
 To trigger the high-fidelity frontend custom error states, the backend must return clean, structured error formats with standard HTTP headers:
-*   **Authentication (401 Unauthorized)**: Middleware returns standard JSON error bodies when token is missing/expired.
+*   **Authentication (401 Unauthorized)**: Middleware returns standard JSON error bodies when token is missing/expired. Supports `error_code` sub-claims (`TOKEN_EXPIRED` or `TOKEN_INVALID`) to help the frontend intelligently execute silent token refreshes versus forced logouts.
 *   **Authorization (403 Forbidden)**: Middleware checks RBAC permissions (refer to `docs/roles-permissions-matrix.md`) and issues `403` standard status.
+*   **Conflicts (409 Conflict)**: Returns standard conflict errors (e.g., when registering an already-existing `StudentID` or `Email`) to prompt user password recoveries instead of duplicate spam.
+*   **Form Validation (422 Unprocessable Entity)**: For request payload validation failures (like user registration, passwords, profile updates, or job submissions), the API must return a structured field-level validation payload containing error lists so the frontend can bind error messages directly below input elements.
 *   **Rate Limiting (429 Too Many Requests)**: Implement a token bucket or window-based rate limiter middleware using Go libraries (e.g. `golang.org/x/time/rate`). Return standard `429` status code with `Retry-After` headers.
 *   **Error Recovery (500 Internal Error)**: Ensure Gin's custom recovery middleware catches panics and formats standard `500` HTTP payloads.

@@ -9,7 +9,7 @@ The MVP covers the end-to-end flow for job searching, management, and user authe
     *   **All Categories Directory**: Browse jobs by organized classifications.
     *   **Search & Multi-Step Filters**: Advanced job search with specific criteria filters (multi-step drawer panels) and custom "No results" screens.
     *   **Interactive Job Details**: A tabbed detail interface split into **Overview**, **Requirements**, **Details**, and **Apply** tabs.
-*   **User Identity**: Dynamic profiles containing customized student **Namecards** (Design B/B1 format).
+*   **User Identity**: Dynamic profiles containing standard student contact & enrollment details. Note: Visual presentation card structures (Design B/B1 style states) are handled entirely independently by the frontend client.
 *   **Core Error States**: Standardized custom HTTP error screens for **403 Forbidden**, **404 Not Found**, **429 Too Many Requests**, and **500 Internal Server Error**.
 
 ---
@@ -46,9 +46,9 @@ The MVP covers the end-to-end flow for job searching, management, and user authe
     *   **If Approved**: System sends an email containing a secure registration link to continue setting up their local password. Once set, they can log in.
     *   **If Denied**: System sends a rejection notification email.
 
-### 2. User Profiles & Namecards
+### 2. User Profiles
 All users have a Profile section to update their contact information (Name, Email, Phone Number, Password).
-*   **Student Profile Layout**: Features a customized student **Namecard** card design (Design B/B1 layout) indicating registration status and summary details.
+*   **Student Profile Layout**: Displays standard enrollment information and registration status. Note: Visual presentation layouts (such as Design B/B1 style cards) are built and managed entirely by the frontend developer independently.
 *   **Secure Password Reset**: A standardized, secure password reset flow using short-lived tokens generated on the backend and verified via email links.
 
 ### 3. Student Portal Features

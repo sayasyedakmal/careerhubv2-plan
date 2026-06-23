@@ -39,7 +39,7 @@ When you start the next session, we will execute these steps one by one:
 
 ### Phase 2: Security & JWT Validation (Day 2)
 5. **[ ] Build Microsoft JWKS Caching Resolver:**  
-   Write a utility function to fetch and cache Microsoft's public keys (`AZURE_AD_JWKS_URL`) for verifying the `id_token` signature.
+   Write a utility function to fetch and cache Microsoft's public keys (`MICROSOFT_ENTRA_JWKS_URL`) for verifying the `id_token` signature.
 6. **[ ] Implement Local JWT Middleware (`middleware/auth.go`):**  
    Create middleware to intercept requests, verify the Custom Access Token, and bind the user context.
 

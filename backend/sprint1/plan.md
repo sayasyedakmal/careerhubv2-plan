@@ -22,66 +22,113 @@ The primary objective of Sprint 1 is to implement the core authentication servic
 
 ## 2. Database Schema (Sprint 1 Scope)
 
-We will provision the following tables in Microsoft SQL Server to support Sprint 1 requirements:
+We will provision the following tables in Microsoft SQL Server to support Sprint 1 requirements, aligned with [init.sql](file:///c:/repo/personal/careerhubv2-plan/docs/init.sql):
 
 ```sql
--- 1. Roles Table
-CREATE TABLE Roles (
-    id INT IDENTITY(1,1) PRIMARY KEY,
-    role_name NVARCHAR(50) NOT NULL UNIQUE
-);
-
--- 2. Users Table
-CREATE TABLE Users (
-    id UNIQUEIDENTIFIER DEFAULT NEWID() PRIMARY KEY,
-    email NVARCHAR(256) NOT NULL UNIQUE,
-    display_name NVARCHAR(256) NOT NULL,
-    phone NVARCHAR(20) NULL,
-    user_type NVARCHAR(50) NOT NULL DEFAULT 'ActiveStudent', -- ActiveStudent, Alumni, Staff
-    registration_status NVARCHAR(50) NOT NULL DEFAULT 'N/A', -- Pending, Approved, Denied, N/A
-    student_id NVARCHAR(50) NULL UNIQUE,
-    major NVARCHAR(256) NULL,
-    password_hash NVARCHAR(256) NULL, -- Deprecated/Unused (All authentication is handled via Microsoft Entra ID)
-    created_at DATETIME2 DEFAULT GETDATE(),
-    updated_at DATETIME2 DEFAULT GETDATE()
-);
-
--- 3. UserRoles Mapping Table
-CREATE TABLE UserRoles (
-    user_id UNIQUEIDENTIFIER FOREIGN KEY REFERENCES Users(id) ON DELETE CASCADE,
-    role_id INT FOREIGN KEY REFERENCES Roles(id) ON DELETE CASCADE,
-    PRIMARY KEY (user_id, role_id)
-);
-
--- 4. Categories Table
+-- 1. Categories Table
 CREATE TABLE Categories (
-    id INT IDENTITY(1,1) PRIMARY KEY,
-    name NVARCHAR(100) NOT NULL UNIQUE,
-    icon_name NVARCHAR(100) NOT NULL -- Maps to frontend Heroicons (e.g. "CommandLineIcon")
+    CategoryID INT IDENTITY(1,1) PRIMARY KEY,
+    CategoryName NVARCHAR(100) NOT NULL,
+    IconName NVARCHAR(100) NULL
+);
+
+-- 2. JobTypes Table
+CREATE TABLE JobTypes (
+    JobTypeID INT IDENTITY(1,1) PRIMARY KEY,
+    TypeName NVARCHAR(50) NOT NULL
+);
+
+-- 3. Users Table (Supports both local & Entra ID auth)
+CREATE TABLE Users (
+    UserID INT IDENTITY(1,1) PRIMARY KEY,
+    MicrosoftObjectID NVARCHAR(100) UNIQUE NULL, -- Null for Alumni
+    Email NVARCHAR(255) UNIQUE NOT NULL,
+    PasswordHash NVARCHAR(255) NULL,            -- Null for Entra ID SSO users
+    DisplayName NVARCHAR(255) NULL,
+    Phone NVARCHAR(50) NULL,
+    UserType NVARCHAR(50) NOT NULL,              -- 'ActiveStudent', 'Alumni', 'Staff', 'SystemAdmin'
+    StudentID NVARCHAR(50) UNIQUE NULL,          -- Null for Staff/Admin
+    RegistrationStatus NVARCHAR(50) DEFAULT 'N/A', -- 'Pending', 'Approved', 'Denied', 'N/A'
+    CreatedAt DATETIME DEFAULT GETDATE(),
+    LastLoginAt DATETIME NULL
+);
+
+-- 4. PasswordResets Table
+CREATE TABLE PasswordResets (
+    ResetID INT IDENTITY(1,1) PRIMARY KEY,
+    UserID INT NOT NULL,
+    TokenHash NVARCHAR(255) NOT NULL,
+    ExpiresAt DATETIME NOT NULL,
+    CONSTRAINT FK_PasswordResets_Users FOREIGN KEY (UserID) REFERENCES Users(UserID) ON DELETE CASCADE
 );
 
 -- 5. Jobs Table
 CREATE TABLE Jobs (
-    id UNIQUEIDENTIFIER DEFAULT NEWID() PRIMARY KEY,
-    job_title NVARCHAR(256) NOT NULL,
-    company_name NVARCHAR(256) NOT NULL,
-    category_id INT FOREIGN KEY REFERENCES Categories(id),
-    job_type NVARCHAR(50) NOT NULL, -- e.g., Full-Time, Part-Time, Internship, Contract
-    location NVARCHAR(256) NOT NULL,
-    location_type NVARCHAR(50) NOT NULL, -- e.g., Onsite, Remote, Hybrid
-    experience_level NVARCHAR(50) NOT NULL, -- e.g., Junior, Mid, Senior
-    salary_min DECIMAL(18,2) NULL,
-    salary_max DECIMAL(18,2) NULL,
-    deadline DATE NOT NULL,
-    job_description NVARCHAR(MAX) NULL,
-    responsibilities NVARCHAR(MAX) NULL,
-    requirements NVARCHAR(MAX) NULL,
-    additional_information NVARCHAR(MAX) NULL,
-    how_to_apply NVARCHAR(MAX) NULL,
-    is_active BIT NOT NULL DEFAULT 1,
-    created_at DATETIME2 DEFAULT GETDATE(),
-    updated_at DATETIME2 DEFAULT GETDATE()
+    JobID INT IDENTITY(1,1) PRIMARY KEY,
+    JobTitle NVARCHAR(255) NOT NULL,
+    CompanyName NVARCHAR(255) NOT NULL,
+    CategoryID INT NOT NULL,
+    JobTypeID INT NOT NULL,
+    IsActive BIT DEFAULT 1,
+    HasSalary BIT DEFAULT 0,
+    SalaryMin DECIMAL(18, 2) NULL,
+    SalaryMax DECIMAL(18, 2) NULL,
+    DeadlineAt DATETIME NULL,
+    State NVARCHAR(255) NULL,
+    City NVARCHAR(255) NULL,
+    PositionCount INT DEFAULT 1,
+    JobDescription NVARCHAR(MAX) NULL,     -- Matches Overview Tab detail
+    Responsibilities NVARCHAR(MAX) NULL,   -- Matches Details Tab narrative
+    Requirements NVARCHAR(MAX) NULL,       -- Matches Requirements Tab checklist
+    AdditionalInformation NVARCHAR(MAX) NULL,
+    HowToApply NVARCHAR(MAX) NULL,          -- Matches Apply Tab instructions
+    CreatedAt DATETIME DEFAULT GETDATE(),
+    CreatedBy INT NULL,
+    UpdatedAt DATETIME DEFAULT GETDATE(),
+    UpdatedBy INT NULL,
+    
+    CONSTRAINT FK_Jobs_Categories FOREIGN KEY (CategoryID) REFERENCES Categories(CategoryID),
+    CONSTRAINT FK_Jobs_JobTypes FOREIGN KEY (JobTypeID) REFERENCES JobTypes(JobTypeID),
+    CONSTRAINT FK_Jobs_CreatedBy FOREIGN KEY (CreatedBy) REFERENCES Users(UserID),
+    CONSTRAINT FK_Jobs_UpdatedBy FOREIGN KEY (UpdatedBy) REFERENCES Users(UserID)
 );
+
+-- 6. Roles Table
+CREATE TABLE Roles (
+    RoleID INT IDENTITY(1,1) PRIMARY KEY,
+    RoleName NVARCHAR(100) UNIQUE NOT NULL
+);
+
+-- 7. Permissions Table
+CREATE TABLE Permissions (
+    PermissionID INT IDENTITY(1,1) PRIMARY KEY,
+    PermissionName NVARCHAR(100) UNIQUE NOT NULL
+);
+
+-- 8. RolePermissions Junction Table
+CREATE TABLE RolePermissions (
+    RoleID INT NOT NULL,
+    PermissionID INT NOT NULL,
+    CONSTRAINT PK_RolePermissions PRIMARY KEY (RoleID, PermissionID),
+    CONSTRAINT FK_RolePermissions_Roles FOREIGN KEY (RoleID) REFERENCES Roles(RoleID) ON DELETE CASCADE,
+    CONSTRAINT FK_RolePermissions_Permissions FOREIGN KEY (PermissionID) REFERENCES Permissions(PermissionID) ON DELETE CASCADE
+);
+
+-- 9. UserRoles Junction Table
+CREATE TABLE UserRoles (
+    UserID INT NOT NULL,
+    RoleID INT NOT NULL,
+    CONSTRAINT PK_UserRoles PRIMARY KEY (UserID, RoleID),
+    CONSTRAINT FK_UserRoles_Users FOREIGN KEY (UserID) REFERENCES Users(UserID) ON DELETE CASCADE,
+    CONSTRAINT FK_UserRoles_Roles FOREIGN KEY (RoleID) REFERENCES Roles(RoleID) ON DELETE CASCADE
+);
+
+-- 10. Performance Indexes
+-- For counting active jobs per category
+CREATE INDEX IX_Jobs_CategoryID_IsActive ON Jobs(CategoryID, IsActive);
+
+-- For fetching latest active jobs efficiently (homepage feeds)
+CREATE INDEX IX_Jobs_CreatedAt_IsActive ON Jobs(CreatedAt DESC, IsActive);
 ```
 
 ---
@@ -99,21 +146,21 @@ CREATE TABLE Jobs (
   }
   ```
 * **Required Configuration (Environment Variables):**
-  * `AZURE_AD_CLIENT_ID`: Frontend's App Application ID registered in Azure AD.
-  * `AZURE_AD_TENANT_ID`: Directory/Tenant ID restricting login to the university's tenant.
-  * `AZURE_AD_JWKS_URL`: Microsoft public keys URL (`https://login.microsoftonline.com/{tenant_id}/discovery/v2.0/keys`).
+  * `MICROSOFT_ENTRA_CLIENT_ID`: Frontend's App Application ID registered in Azure AD.
+  * `MICROSOFT_ENTRA_TENANT_ID`: Directory/Tenant ID restricting login to the university's tenant.
+  * `MICROSOFT_ENTRA_JWKS_URL`: Microsoft public keys URL (`https://login.microsoftonline.com/{tenant_id}/discovery/v2.0/keys`).
 * **Backend Processing Pipeline:**
   1. **Token Parse & Header Check:** Parse the `id_token` (JWT format) without verification to read the header and extract the Key ID (`kid`).
-  2. **JWKS Key Resolution:** Resolve the corresponding public key from the cached JWKS (JSON Web Key Set) endpoint. If missing, fetch from `AZURE_AD_JWKS_URL` and update the cache.
+  2. **JWKS Key Resolution:** Resolve the corresponding public key from the cached JWKS (JSON Web Key Set) endpoint. If missing, fetch from `MICROSOFT_ENTRA_JWKS_URL` and update the cache.
   3. **Signature Verification:** Verify the token's cryptographic signature against the public key.
   4. **Claims Validation:** Validate:
-     * Audience (`aud`): Must match `AZURE_AD_CLIENT_ID`.
+     * Audience (`aud`): Must match `MICROSOFT_ENTRA_CLIENT_ID`.
      * Issuer (`iss`): Must match `https://login.microsoftonline.com/{tenant_id}/v2.0` (or `https://sts.windows.net/{tenant_id}/`).
      * Expiration (`exp`): Current time must be before expiration time.
      * Not Before (`nbf`): Current time must be after active time.
   5. **User Registration / Mapping:** Extract claims: `email`, `name` (or `preferred_username`), and `oid` (unique MS object ID). Query `Users` database table:
-     * **If User exists:** Fetch user record.
-     * **If User does NOT exist:** Auto-register user. If the email contains the domain `@student.uow.edu.my`, set `user_type` = `ActiveStudent` and assign `Active Student` role.
+     * **If User exists:** Fetch user record (querying by `MicrosoftObjectID` or `Email`).
+     * **If User does NOT exist:** Auto-register user. If the email contains the domain `@student.uow.edu.my`, set `UserType` = `'ActiveStudent'`, `RegistrationStatus` = `'N/A'`, and assign the `Active Student` role in `UserRoles`.
      * **Bootstrap Admin Check:** If the email matches the environment variable `BOOTSTRAP_ADMIN_EMAIL`, automatically assign the `System Admin` role.
   6. **Token Generation:** Generate and return CareerHub custom JWT tokens (Access token and Refresh token).
 * **Success Response (200 OK):**
@@ -145,30 +192,32 @@ CREATE TABLE Jobs (
 #### 4. Get Current User Profile
 * **Endpoint:** `GET /api/v1/users/me`
 * **Authorization:** `Bearer <JWT_ACCESS_TOKEN>`
-* **Usage:** Returns details to show student name in the welcome banner (*Welcome, [Student Name]*).
+* **Usage:** Returns details to show student name in the welcome banner.
 * **Success Response (200 OK):**
   ```json
   {
-    "id": "123e4567-e89b-12d3-a456-426614174000",
+    "id": 1,
     "email": "student@uow.edu.my",
     "display_name": "Sarah Connor",
     "phone": "+60129998877",
     "user_type": "ActiveStudent",
-    "student_id": "99887766",
-    "major": "Bachelor of Software Engineering (Hons)"
+    "student_id": "99887766"
   }
   ```
 
 #### 5. Fetch Dashboard Categories
 * **Endpoint:** `GET /api/v1/categories`
 * **Authorization:** `Bearer <JWT_ACCESS_TOKEN>`
-* **Usage:** Feeds the *"Top 3 Job Categories"* navigation block.
+* **Usage:** Feeds the *"Top 3 Job Categories"* navigation block. Supports sorting by job counts to fetch top categories.
+* **Query Parameters:**
+  * `limit` (int, optional) - Limit the number of categories returned (e.g. `limit=3`).
+  * `sort` (string, optional) - Set to `job_count` to sort by categories with the most active jobs first.
 * **Success Response (200 OK):**
   ```json
   [
-    { "id": "1", "name": "Computing & IT", "icon_name": "CommandLineIcon" },
-    { "id": "2", "name": "Engineering", "icon_name": "WrenchIcon" },
-    { "id": "3", "name": "Hospitality", "icon_name": "BriefcaseIcon" }
+    { "id": 1, "name": "Computing & IT", "icon_name": "CommandLineIcon", "job_count": 15 },
+    { "id": 2, "name": "Engineering", "icon_name": "WrenchIcon", "job_count": 9 },
+    { "id": 3, "name": "Hospitality", "icon_name": "BriefcaseIcon", "job_count": 4 }
   ]
   ```
 
@@ -178,23 +227,22 @@ CREATE TABLE Jobs (
 * **Usage:** 
   * Feeds the *"Latest Jobs"* carousel (e.g. via `GET /api/v1/jobs?limit=5`).
   * Powers the search bar input and advanced filters drawer.
-* **Query Parameters:** `page`, `limit`, `search`, `category_id`, `job_type`, `location_type`, `experience_level`.
+* **Query Parameters:** `page`, `limit`, `search`, `category_id`, `job_type_id`.
 * **Success Response (200 OK):**
   ```json
   [
     {
-      "id": "1a2b3c4d-...",
+      "id": 101,
       "job_title": "Event Executive (Skincare Industry)",
       "company_name": "LAVIN PHARMA (M) SDN BHD",
-      "category_id": "3",
-      "category_name": "Hospitality",
+      "category_id": 3,
+      "category_name": "Hospitality & Tourism",
       "job_type": "Internship",
-      "location": "Selangor",
-      "location_type": "Hybrid",
-      "experience_level": "Junior",
+      "state": "Selangor",
+      "city": "Shah Alam",
       "salary_min": 700.00,
       "salary_max": 1200.00,
-      "deadline": "2026-07-31",
+      "deadline": "2026-07-31T00:00:00Z",
       "is_active": true,
       "created_at": "2026-06-15T15:30:00Z"
     }
@@ -205,7 +253,7 @@ CREATE TABLE Jobs (
 * **Endpoint:** `GET /api/v1/jobs/{id}`
 * **Authorization:** `Bearer <JWT_ACCESS_TOKEN>`
 * **Usage:** Triggers when clicking **"Find out more"** to fetch segmented tabs details.
-* **Success Response (200 OK):** Returns detailed fields like `job_description`, `responsibilities`, `requirements`, and `how_to_apply`.
+* **Success Response (200 OK):** Returns detailed fields like `job_description`, `responsibilities`, `requirements`, `additional_information`, and `how_to_apply`.
 
 ---
 
@@ -237,9 +285,9 @@ To test the Microsoft ID Token validation logic with a real Entra ID token:
 1. **Generate ID Token via OIDC Debugger:**
    * Go to [oidcdebugger.com](https://oidcdebugger.com/).
    * Enter the following details:
-     * **Authorize URI:** `https://login.microsoftonline.com/{AZURE_AD_TENANT_ID}/oauth2/v2.0/authorize` *(Replace `{AZURE_AD_TENANT_ID}` with your active tenant ID)*
+     * **Authorize URI:** `https://login.microsoftonline.com/{MICROSOFT_ENTRA_TENANT_ID}/oauth2/v2.0/authorize` *(Replace `{MICROSOFT_ENTRA_TENANT_ID}` with your active tenant ID)*
      * **Redirect URI:** `https://oidcdebugger.com/redirect`
-     * **Client ID:** Your `AZURE_AD_CLIENT_ID`
+     * **Client ID:** Your `MICROSOFT_ENTRA_CLIENT_ID`
      * **Scope:** `openid profile email`
      * **Response type:** `id_token`
      * **Response mode:** `form_post`
@@ -249,7 +297,7 @@ To test the Microsoft ID Token validation logic with a real Entra ID token:
 2. **Send Exchange Request:**
    * Using an API client (like Postman or cURL), send the token to the local server:
      ```bash
-     POST http://localhost:8080/api/v1/auth/login/microsoft
+     POST http://localhost:8085/api/v1/auth/login/microsoft
      Content-Type: application/json
 
      {
@@ -270,4 +318,4 @@ To test endpoints requiring authentication (such as `GET /api/v1/users/me` or `G
      Authorization: Bearer <PASTE_ACCESS_TOKEN>
      ```
 3. **Execute Requests:**
-   * Query protected endpoints (e.g. `GET http://localhost:8080/api/v1/jobs?limit=5`) to verify authorization checks, data payload formats, and correct HTTP response codes.
+   * Query protected endpoints (e.g. `GET http://localhost:8085/api/v1/jobs?limit=5`) to verify authorization checks, data payload formats, and correct HTTP response codes.

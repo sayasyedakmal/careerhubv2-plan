@@ -66,8 +66,9 @@ CREATE TABLE Jobs (
     HasSalary BIT DEFAULT 0,
     SalaryMin DECIMAL(18, 2) NULL,
     SalaryMax DECIMAL(18, 2) NULL,
-    Deadline DATETIME NULL,
-    Location NVARCHAR(255) NULL,
+    DeadlineAt DATETIME NULL,
+    State NVARCHAR(255) NULL,
+    City NVARCHAR(255) NULL,
     PositionCount INT DEFAULT 1,
     JobDescription NVARCHAR(MAX) NULL,     -- Matches Overview Tab detail
     Responsibilities NVARCHAR(MAX) NULL,   -- Matches Details Tab narrative
@@ -75,10 +76,14 @@ CREATE TABLE Jobs (
     AdditionalInformation NVARCHAR(MAX) NULL,
     HowToApply NVARCHAR(MAX) NULL,          -- Matches Apply Tab instructions
     CreatedAt DATETIME DEFAULT GETDATE(),
+    CreatedBy INT NULL,
     UpdatedAt DATETIME DEFAULT GETDATE(),
+    UpdatedBy INT NULL,
     
     CONSTRAINT FK_Jobs_Categories FOREIGN KEY (CategoryID) REFERENCES Categories(CategoryID),
-    CONSTRAINT FK_Jobs_JobTypes FOREIGN KEY (JobTypeID) REFERENCES JobTypes(JobTypeID)
+    CONSTRAINT FK_Jobs_JobTypes FOREIGN KEY (JobTypeID) REFERENCES JobTypes(JobTypeID),
+    CONSTRAINT FK_Jobs_CreatedBy FOREIGN KEY (CreatedBy) REFERENCES Users(UserID),
+    CONSTRAINT FK_Jobs_UpdatedBy FOREIGN KEY (UpdatedBy) REFERENCES Users(UserID)
 );
 
 -- Create AuditLogs Table

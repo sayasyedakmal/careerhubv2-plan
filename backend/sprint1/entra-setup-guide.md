@@ -47,8 +47,8 @@ Copy the values for these two fields:
 ┌─────────────────────────────────────────────────────────────┐
 │ Essentials                                                  │
 │                                                             │
-│  Application (client) ID  :  [ 1a2b3c4d-5e6f-7a8b-9c0d... ] │ ◄── AZURE_AD_CLIENT_ID
-│  Directory (tenant) ID    :  [ 9f8e7d6c-5b4a-3f2e-1d0c... ] │ ◄── AZURE_AD_TENANT_ID
+│  Application (client) ID  :  [ 1a2b3c4d-5e6f-7a8b-9c0d... ] │ ◄── MICROSOFT_ENTRA_CLIENT_ID
+│  Directory (tenant) ID    :  [ 9f8e7d6c-5b4a-3f2e-1d0c... ] │ ◄── MICROSOFT_ENTRA_TENANT_ID
 │  Object ID                :  [ 8c7b6a5d-4e3f-2a1b-0c9d... ] │
 └─────────────────────────────────────────────────────────────┘
 ```
@@ -60,9 +60,9 @@ Create or update your `backend/.env` file with these values:
 
 ```bash
 # Microsoft Entra ID Authentication Settings
-AZURE_AD_CLIENT_ID="your-copied-application-client-id"
-AZURE_AD_TENANT_ID="your-copied-directory-tenant-id"
-AZURE_AD_JWKS_URL="https://login.microsoftonline.com/your-copied-directory-tenant-id/discovery/v2.0/keys"
+MICROSOFT_ENTRA_CLIENT_ID="your-copied-application-client-id"
+MICROSOFT_ENTRA_TENANT_ID="your-copied-directory-tenant-id"
+MICROSOFT_ENTRA_JWKS_URL="https://login.microsoftonline.com/your-copied-directory-tenant-id/discovery/v2.0/keys"
 ```
 
 ---

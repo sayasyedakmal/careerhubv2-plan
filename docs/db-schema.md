@@ -87,8 +87,9 @@ The primary table for job listings.
 - `HasSalary`: `BIT DEFAULT 0`
 - `SalaryMin`: `DECIMAL(18, 2) NULL`
 - `SalaryMax`: `DECIMAL(18, 2) NULL`
-- `Deadline`: `DATETIME NULL`
-- `Location`: `NVARCHAR(255) NULL`
+- `DeadlineAt`: `DATETIME NULL`
+- `State`: `NVARCHAR(255) NULL`
+- `City`: `NVARCHAR(255) NULL`
 - `PositionCount`: `INT DEFAULT 1`
 - `JobDescription`: `NVARCHAR(MAX)`
 - `Responsibilities`: `NVARCHAR(MAX)`
@@ -96,7 +97,9 @@ The primary table for job listings.
 - `AdditionalInformation`: `NVARCHAR(MAX)`
 - `HowToApply`: `NVARCHAR(MAX)`
 - `CreatedAt`: `DATETIME DEFAULT GETDATE()` (Used to see how old the posting is)
+- `CreatedBy`: `INT FOREIGN KEY REFERENCES Users(UserID) NULL`
 - `UpdatedAt`: `DATETIME DEFAULT GETDATE()`
+- `UpdatedBy`: `INT FOREIGN KEY REFERENCES Users(UserID) NULL`
 
 ### Tables: `Categories` & `JobTypes`
 - **Categories**: `CategoryID` (PK), `CategoryName`

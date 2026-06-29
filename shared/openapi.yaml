@@ -171,7 +171,7 @@ components:
           type: string
         user_type:
           type: string
-          description: ActiveStudent, Alumni, Staff, SystemAdmin
+          description: Student, Alumni, Staff, SystemAdmin, External
         registration_status:
           type: string
           description: Pending, Approved, Denied, N/A

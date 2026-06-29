@@ -46,8 +46,8 @@ CREATE TABLE Users (
     PasswordHash NVARCHAR(255) NULL,            -- Null for Entra ID SSO users
     DisplayName NVARCHAR(255) NULL,
     Phone NVARCHAR(50) NULL,
-    UserType NVARCHAR(50) NOT NULL,              -- 'ActiveStudent', 'Alumni', 'Staff', 'SystemAdmin'
-    StudentID NVARCHAR(50) UNIQUE NULL,          -- Null for Staff/Admin
+    UserType NVARCHAR(50) NOT NULL,              -- 'Student', 'Alumni', 'Staff', 'SystemAdmin', 'External'
+    StudentID NVARCHAR(50) UNIQUE NULL,          -- Null for Staff/Admin/External
     RegistrationStatus NVARCHAR(50) DEFAULT 'N/A', -- 'Pending', 'Approved', 'Denied', 'N/A'
     CreatedAt DATETIME DEFAULT GETDATE(),
     LastLoginAt DATETIME NULL
@@ -156,13 +156,17 @@ CREATE INDEX IX_Jobs_CreatedAt_IsActive ON Jobs(CreatedAt DESC, IsActive);
   4. **Claims Validation:** Validate:
      * Audience (`aud`): Must match `MICROSOFT_ENTRA_CLIENT_ID`.
      * Issuer (`iss`): Must match `https://login.microsoftonline.com/{tenant_id}/v2.0` (or `https://sts.windows.net/{tenant_id}/`).
+     * Tenant ID (`tid`): Must match `MICROSOFT_ENTRA_TENANT_ID`. (If mismatch, return `403 Forbidden` with error code `INVALID_TENANT`).
      * Expiration (`exp`): Current time must be before expiration time.
      * Not Before (`nbf`): Current time must be after active time.
-  5. **User Registration / Mapping:** Extract claims: `email`, `name` (or `preferred_username`), and `oid` (unique MS object ID). Query `Users` database table:
-     * **If User exists:** Fetch user record (querying by `MicrosoftObjectID` or `Email`).
-     * **If User does NOT exist:** Auto-register user. If the email contains the domain `@student.uow.edu.my`, set `UserType` = `'ActiveStudent'`, `RegistrationStatus` = `'N/A'`, and assign the `Active Student` role in `UserRoles`.
-     * **Bootstrap Admin Check:** If the email matches the environment variable `BOOTSTRAP_ADMIN_EMAIL`, automatically assign the `System Admin` role.
-  6. **Token Generation:** Generate and return CareerHub custom JWT tokens (Access token and Refresh token).
+  5. **User Registration / Mapping & Profile Sync:** Extract claims: `email`, `name` (or `preferred_username`), and `oid` (unique MS object ID). Query `Users` database table:
+     * **If User exists:** Fetch user record. Check if incoming claims (`DisplayName`, `Email`) differ from the DB record. If changes are detected, sync and update the database record automatically.
+     * **If User does NOT exist:** Auto-register user based on domain rules:
+       * **Student Domain (`@student.uow.edu.my`):** Set `UserType = 'Student'`, `RegistrationStatus = 'N/A'`, extract `StudentID` from email username prefix (e.g., `99887766`), and assign the `Student` role in `UserRoles`.
+       * **Staff Domain (`@uow.edu.my`):** Set `UserType = 'Staff'`, `RegistrationStatus = 'N/A'`, and assign **no default roles** (roles assigned manually by Admin).
+       * **Other Domains:** Set `UserType = 'External'`, `RegistrationStatus = 'Pending'`, and assign **no default roles**.
+     * **Bootstrap Admin Check:** If the email matches the environment variable `BOOTSTRAP_ADMIN_EMAIL`, set `UserType = 'SystemAdmin'`, `RegistrationStatus = 'N/A'`, and automatically assign the `System Admin` role.
+  6. **Token Generation:** Generate and return CareerHub custom JWT tokens (Access token and Refresh token). Refresh tokens are stateless JWTs.
 * **Success Response (200 OK):**
   ```json
   {
@@ -171,6 +175,10 @@ CREATE INDEX IX_Jobs_CreatedAt_IsActive ON Jobs(CreatedAt DESC, IsActive);
     "expires_in": 3600
   }
   ```
+* **Error Responses:**
+  * `401 Unauthorized`: `{"error_code": "INVALID_MICROSOFT_TOKEN", "message": "Microsoft ID token verification failed or token expired"}`
+  * `403 Forbidden`: `{"error_code": "INVALID_TENANT", "message": "Authenticated Microsoft tenant is not authorized for this application"}`
+  * `500 Internal Server Error`: `{"error_code": "DATABASE_ERROR", "message": "Internal service error while processing user login"}`
 
 #### 2. Local Credentials Login (Out of Scope)
 * **Endpoint:** `POST /api/v1/auth/login` (Not implemented in Sprint 1. All users authenticate via Microsoft MSAL.)
@@ -183,7 +191,9 @@ CREATE INDEX IX_Jobs_CreatedAt_IsActive ON Jobs(CreatedAt DESC, IsActive);
     "refresh_token": "careerhub_jwt_refresh_token..."
   }
   ```
-* **Success Response (200 OK):** Returns new `access_token` and `refresh_token`.
+* **Success Response (200 OK):** Returns new `access_token` and the current/valid `refresh_token`.
+* **Error Response:**
+  * `401 Unauthorized`: `{"error_code": "INVALID_REFRESH_TOKEN", "message": "Refresh token is invalid or expired. Please sign in again."}`
 
 ---
 
@@ -200,7 +210,7 @@ CREATE INDEX IX_Jobs_CreatedAt_IsActive ON Jobs(CreatedAt DESC, IsActive);
     "email": "student@uow.edu.my",
     "display_name": "Sarah Connor",
     "phone": "+60129998877",
-    "user_type": "ActiveStudent",
+    "user_type": "Student",
     "student_id": "99887766"
   }
   ```
@@ -211,13 +221,13 @@ CREATE INDEX IX_Jobs_CreatedAt_IsActive ON Jobs(CreatedAt DESC, IsActive);
 * **Usage:** Feeds the *"Top 3 Job Categories"* navigation block. Supports sorting by job counts to fetch top categories.
 * **Query Parameters:**
   * `limit` (int, optional) - Limit the number of categories returned (e.g. `limit=3`).
-  * `sort` (string, optional) - Set to `job_count` to sort by categories with the most active jobs first.
+  * `sort` (string, optional) - Set to `job_count` to sort by categories with the most active and unexpired jobs first (`IsActive = 1` AND (`DeadlineAt IS NULL` OR `DeadlineAt > GETDATE()`)).
 * **Success Response (200 OK):**
   ```json
   [
-    { "id": 1, "name": "Computing & IT", "icon_name": "CommandLineIcon", "job_count": 15 },
-    { "id": 2, "name": "Engineering", "icon_name": "WrenchIcon", "job_count": 9 },
-    { "id": 3, "name": "Hospitality", "icon_name": "BriefcaseIcon", "job_count": 4 }
+    { "id": 1, "name": "Computing & IT", "icon_name": "CommandLineIcon", "active_job_count": 15 },
+    { "id": 2, "name": "Engineering", "icon_name": "WrenchIcon", "active_job_count": 9 },
+    { "id": 3, "name": "Hospitality", "icon_name": "BriefcaseIcon", "active_job_count": 4 }
   ]
   ```
 
@@ -227,26 +237,35 @@ CREATE INDEX IX_Jobs_CreatedAt_IsActive ON Jobs(CreatedAt DESC, IsActive);
 * **Usage:** 
   * Feeds the *"Latest Jobs"* carousel (e.g. via `GET /api/v1/jobs?limit=5`).
   * Powers the search bar input and advanced filters drawer.
+* **Filtering Logic:** Automatically filters out inactive jobs (`IsActive = 0`) and expired jobs (`DeadlineAt <= GETDATE()`) by default for student requests.
 * **Query Parameters:** `page`, `limit`, `search`, `category_id`, `job_type_id`.
-* **Success Response (200 OK):**
+* **Success Response (200 OK):** Returns a standardized envelope containing `data` list and `pagination` metadata:
   ```json
-  [
-    {
-      "id": 101,
-      "job_title": "Event Executive (Skincare Industry)",
-      "company_name": "LAVIN PHARMA (M) SDN BHD",
-      "category_id": 3,
-      "category_name": "Hospitality & Tourism",
-      "job_type": "Internship",
-      "state": "Selangor",
-      "city": "Shah Alam",
-      "salary_min": 700.00,
-      "salary_max": 1200.00,
-      "deadline": "2026-07-31T00:00:00Z",
-      "is_active": true,
-      "created_at": "2026-06-15T15:30:00Z"
+  {
+    "data": [
+      {
+        "id": 101,
+        "job_title": "Event Executive (Skincare Industry)",
+        "company_name": "LAVIN PHARMA (M) SDN BHD",
+        "category_id": 3,
+        "category_name": "Hospitality & Tourism",
+        "job_type": "Internship",
+        "state": "Selangor",
+        "city": "Shah Alam",
+        "salary_min": 700.00,
+        "salary_max": 1200.00,
+        "deadline": "2026-07-31T00:00:00Z",
+        "is_active": true,
+        "created_at": "2026-06-15T15:30:00Z"
+      }
+    ],
+    "pagination": {
+      "page": 1,
+      "limit": 10,
+      "total_records": 45,
+      "total_pages": 5
     }
-  ]
+  }
   ```
 
 #### 7. Fetch Single Job Details
@@ -264,7 +283,7 @@ CREATE INDEX IX_Jobs_CreatedAt_IsActive ON Jobs(CreatedAt DESC, IsActive);
 2. **Step 2: Security & JWT Verification Middleware**  
    Implement JWT validation and parsing using `golang-jwt`. Write standard auth validation checks (HTTP `401` handling) and role check checks (HTTP `403` handling).
 3. **Step 3: Microsoft Entra ID JWKS Validator**  
-   Implement a helper function to fetch and cache Microsoft's public keys from `https://login.microsoftonline.com/common/discovery/v2.0/keys` to securely verify Microsoft Entra ID tokens.
+   Implement a helper function to fetch and cache Microsoft's public keys from `https://login.microsoftonline.com/{tenant_id}/discovery/v2.0/keys` to securely verify Microsoft Entra ID tokens.
 4. **Step 4: Auth Controllers Implementation**  
    Write Gin handlers for `/auth/login/microsoft` and `/auth/refresh`. (Local login/registration endpoints `/auth/login` and `/auth/register` are out of scope).
 5. **Step 5: Dashboard Content Controllers**  

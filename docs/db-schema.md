@@ -21,7 +21,7 @@ erDiagram
         string DisplayName
         string Phone
         string PasswordHash "for local auth"
-        string UserType "Student, Alumni, Staff, Admin"
+        string UserType "Student, Alumni, Staff, SystemAdmin, External"
         string StudentID
         string RegistrationStatus "Pending, Approved, Denied, N/A"
     }
@@ -57,7 +57,7 @@ Stores user information for both Entra ID users and local Alumni.
 - `PasswordHash`: `NVARCHAR(255) NULL` (Null for Entra ID users)
 - `DisplayName`: `NVARCHAR(255)`
 - `Phone`: `NVARCHAR(50) NULL`
-- `UserType`: `NVARCHAR(50) NOT NULL` (e.g., 'ActiveStudent', 'Alumni', 'Staff', 'SystemAdmin')
+- `UserType`: `NVARCHAR(50) NOT NULL` (e.g., 'Student', 'Alumni', 'Staff', 'SystemAdmin', 'External')
 - `StudentID`: `NVARCHAR(50) UNIQUE NULL` (Used for Alumni verification. Must be unique to prevent duplicates and registration spams)
 - `RegistrationStatus`: `NVARCHAR(50) DEFAULT 'N/A'` (Pending, Approved, Denied)
 - `CreatedAt`: `DATETIME DEFAULT GETDATE()`

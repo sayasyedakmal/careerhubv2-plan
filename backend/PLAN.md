@@ -44,8 +44,8 @@ To power the multi-step filter pages (`Filter feature` steps 1-3) on the fronten
 
 ### Auth & Onboarding
 *   `POST /api/v1/auth/login/microsoft` (Entra ID flow)
-    *   **Auto-Registration & Role Mapping**: When validating an Entra ID token for a new user, upsert their record into the `Users` table. If the email contains the student domain `@uow.edu.my`, automatically assign the `Active Student` role in `UserRoles`.
-    *   **Bootstrap Admin Override**: Read `BOOTSTRAP_ADMIN_EMAIL` from OS/environment variables. If the validated Entra ID email matches this variable, automatically assign them the `System Admin` role to avoid cold-start lockouts.
+    *   **Auto-Registration & Role Mapping**: When validating an Entra ID token for a new user, upsert their record into the `Users` table. If the email contains the student domain `@student.uow.edu.my`, set `UserType = 'Student'` and automatically assign the `Student` role in `UserRoles`. Staff emails (`@uow.edu.my`) set `UserType = 'Staff'` with no default roles.
+    *   **Bootstrap Admin Override**: Read `BOOTSTRAP_ADMIN_EMAIL` from OS/environment variables. If the validated Entra ID email matches this variable, set `UserType = 'SystemAdmin'` and automatically assign them the `System Admin` role to avoid cold-start lockouts.
 *   `POST /api/v1/auth/login` (Local login)
 *   `POST /api/v1/auth/register` (Alumni onboarding request)
 *   `POST /api/v1/auth/password-reset` & `POST /api/v1/auth/password-change`

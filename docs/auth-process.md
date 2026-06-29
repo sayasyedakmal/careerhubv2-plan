@@ -83,12 +83,14 @@ To prevent accidental session termination, triggering "Log out" from the mobile 
 ## 1d. Automatic Role Assignment & Bootstrap Admin
 To avoid critical operational bottlenecks (like requiring admins to manually approve thousands of students or being locked out of the system upon fresh installation):
 
-1. **Auto-Assignment for Active Students**:
+1. **Auto-Assignment & Domain Mapping Rules**:
    * When an Entra ID token is validated for a user logging in for the *first time*, the backend creates an account in the database (upsert).
-   * If the user's email belongs to the official student domain (`@uow.edu.my`), the backend **automatically assigns them the `Active Student` role** instantly. They are immediately directed to the search dashboard without manual approval.
+   * **Student Domain (`@student.uow.edu.my`):** Automatically assigned `UserType = 'Student'`, `RegistrationStatus = 'N/A'`, and granted the **`Student` role** instantly. They are immediately directed to the search dashboard without manual approval.
+   * **Staff Domain (`@uow.edu.my`):** Assigned `UserType = 'Staff'` and `RegistrationStatus = 'N/A'`, with **no default roles** (roles assigned manually by a System Admin).
+   * **Other Domains:** Assigned `UserType = 'External'` and `RegistrationStatus = 'Pending'`, with **no default roles**.
 2. **Bootstrap Admin Override (Cold Start Solution)**:
    * During server deployment, configure a secure OS/system environment variable: `BOOTSTRAP_ADMIN_EMAIL` (e.g., `admin@uow.edu.my`).
-   * When an Entra ID user with a matching email logs in, the backend **automatically grants them the `System Admin` role**.
+   * When an Entra ID user with a matching email logs in, the backend **automatically grants them the `System Admin` role** and sets `UserType = 'SystemAdmin'`.
    * This initial Admin user can then access `/admin/roles` and `/admin/users/{id}/roles` endpoints to delegate permissions and appoint other SAC staff or admins safely.
 
 

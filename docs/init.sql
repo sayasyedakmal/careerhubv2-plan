@@ -39,8 +39,8 @@ CREATE TABLE Users (
     PasswordHash NVARCHAR(255) NULL,            -- Null for Entra ID SSO users
     DisplayName NVARCHAR(255) NULL,
     Phone NVARCHAR(50) NULL,
-    UserType NVARCHAR(50) NOT NULL,              -- 'ActiveStudent', 'Alumni', 'Staff', 'SystemAdmin'
-    StudentID NVARCHAR(50) UNIQUE NULL,          -- Null for Staff/Admin
+    UserType NVARCHAR(50) NOT NULL,              -- 'Student', 'Alumni', 'Staff', 'SystemAdmin', 'External'
+    StudentID NVARCHAR(50) UNIQUE NULL,          -- Null for Staff/Admin/External
     RegistrationStatus NVARCHAR(50) DEFAULT 'N/A', -- 'Pending', 'Approved', 'Denied', 'N/A'
     CreatedAt DATETIME DEFAULT GETDATE(),
     LastLoginAt DATETIME NULL
@@ -160,7 +160,7 @@ SET IDENTITY_INSERT Roles ON;
 INSERT INTO Roles (RoleID, RoleName) VALUES 
 (1, 'System Admin'),
 (2, 'SAC Department'),
-(3, 'Active Student'),
+(3, 'Student'),
 (4, 'Alumni');
 SET IDENTITY_INSERT Roles OFF;
 
@@ -190,7 +190,7 @@ INSERT INTO RolePermissions (RoleID, PermissionID) VALUES
 INSERT INTO RolePermissions (RoleID, PermissionID) VALUES 
 (2, 3), (2, 4), (2, 5), (2, 6), (2, 7), (2, 8), (2, 9);
 
--- Active Student permissions: view & apply
+-- Student permissions: view & apply
 INSERT INTO RolePermissions (RoleID, PermissionID) VALUES 
 (3, 8), (3, 9);
 

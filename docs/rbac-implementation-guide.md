@@ -10,7 +10,7 @@ At its core, RBAC is simply asking: **"Does this user have the correct permissio
 
 Before anyone logs in, we need a list of rules. We have mapped out exactly what each role can do in the `docs/roles-permissions-matrix.md` file. 
 
-During the backend database setup, you will create a seeding script that inserts these rules into the SQL Server database. For example, it will insert a rule saying that the "System Admin" role contains the `"create_job"` permission string, but the "Active Student" role does not.
+During the backend database setup, you will create a seeding script that inserts these rules into the SQL Server database. For example, it will insert a rule saying that the "System Admin" role contains the `"create_job"` permission string, but the "Student" role does not.
 
 ---
 

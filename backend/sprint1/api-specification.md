@@ -33,7 +33,7 @@ All endpoints except **Microsoft Token Exchange** and **Token Refresh** require 
       "sub": "1",                                    // User ID in CareerHub DB (stringified integer)
       "email": "student@uow.edu.my",                 // User email
       "display_name": "Sarah Connor",                // Display Name
-      "role": "ActiveStudent",                       // User role (System Admin, Active Student, Alumni)
+      "role": "Student",                            // User role (System Admin, Student, Staff, Alumni, External)
       "exp": 1782048000,                             // Expiration timestamp
       "iat": 1782044400                              // Issued-at timestamp
     }
@@ -267,7 +267,7 @@ None.
   | `email` | String | University email address. |
   | `display_name` | String | Full name retrieved from Entra ID / student profile. |
   | `phone` | String / Null | Contact number. May be null. |
-  | `user_type` | String | User type classification (`ActiveStudent`, `Alumni`, `Staff`). |
+  | `user_type` | String | User type classification (`Student`, `Alumni`, `Staff`, `SystemAdmin`, `External`). |
   | `student_id` | String / Null | University Student Card number. Null for non-student profiles. |
 
 ##### Success Response Example
@@ -277,7 +277,7 @@ None.
   "email": "akmal.o@uow.edu.my",
   "display_name": "Sarah Connor",
   "phone": "+60129998877",
-  "user_type": "ActiveStudent",
+  "user_type": "Student",
   "student_id": "99887766"
 }
 ```
@@ -340,7 +340,7 @@ Fetches the job categories list. Supports limiting results and sorting by the co
   | `id` | Integer | Unique category identifier in DB. |
   | `name` | String | User-facing Category Name. |
   | `icon_name` | String | Heroicon name to map on the frontend (e.g. `CommandLineIcon`). |
-  | `job_count` | Integer | Number of active jobs currently associated with this category. |
+  | `active_job_count` | Integer | Number of active and unexpired jobs currently associated with this category. |
 
 ##### Success Response Example
 ```json
@@ -349,19 +349,19 @@ Fetches the job categories list. Supports limiting results and sorting by the co
     "id": 1,
     "name": "Computing & IT",
     "icon_name": "CommandLineIcon",
-    "job_count": 15
+    "active_job_count": 15
   },
   {
     "id": 2,
     "name": "Engineering",
     "icon_name": "WrenchIcon",
-    "job_count": 9
+    "active_job_count": 9
   },
   {
     "id": 3,
     "name": "Hospitality",
     "icon_name": "BriefcaseIcon",
-    "job_count": 4
+    "active_job_count": 4
   }
 ]
 ```
@@ -412,46 +412,43 @@ Query, filter, and page through the active job catalog. Used both for the homepa
 `GET http://localhost:8085/api/v1/jobs?limit=5`
 
 ##### Request URL Example (Advanced Filter Search)
-`GET http://localhost:8085/api/v1/jobs?search=Developer&job_type_id=3&page=2&limit=10`
+`GET http://localhost:8085/api/v1/jobs?search=Developer&job_type_id=3&page=1&limit=10`
 
 #### Success Response
 * **HTTP Status:** `200 OK`
-* **Body Schema:** Array of job summary objects.
+* **Body Schema:** Object containing `data` list of job summaries and `pagination` metadata envelope.
   | Field Name | Type | Description |
   | :--- | :--- | :--- |
-  | `id` | Integer | Unique Job ID. |
-  | `job_title` | String | Job Designation Title. |
-  | `company_name` | String | Name of hiring company. |
-  | `category_id` | Integer | Category identifier. |
-  | `category_name` | String | Category classification name (joined). |
-  | `job_type` | String | Employment type name (joined, e.g. "Internship"). |
-  | `state` | String | State (e.g. "Selangor"). |
-  | `city` | String | City (e.g. "Shah Alam"). |
-  | `salary_min` | Float / Null | Minimum salary range. May be null if confidential. |
-  | `salary_max` | Float / Null | Maximum salary range. May be null if confidential. |
-  | `deadline` | String (DateTime) | Date format `YYYY-MM-DDTHH:mm:ssZ` until which applications are open. |
-  | `is_active` | Boolean | True if the job listing is open. Defaults to true. |
-  | `created_at` | String (DateTime) | Listing creation timestamp. |
+  | `data` | Array | List of job objects matching search/filter constraints (filters out inactive and expired jobs by default). |
+  | `pagination` | Object | Envelope detailing `page`, `limit`, `total_records`, and `total_pages`. |
 
 ##### Success Response Example
 ```json
-[
-  {
-    "id": 101,
-    "job_title": "Event Executive (Skincare Industry)",
-    "company_name": "LAVIN PHARMA (M) SDN BHD",
-    "category_id": 3,
-    "category_name": "Hospitality & Tourism",
-    "job_type": "Internship",
-    "state": "Selangor",
-    "city": "Shah Alam",
-    "salary_min": 700.00,
-    "salary_max": 1200.00,
-    "deadline": "2026-07-31T00:00:00Z",
-    "is_active": true,
-    "created_at": "2026-06-22T14:38:00Z"
+{
+  "data": [
+    {
+      "id": 101,
+      "job_title": "Event Executive (Skincare Industry)",
+      "company_name": "LAVIN PHARMA (M) SDN BHD",
+      "category_id": 3,
+      "category_name": "Hospitality & Tourism",
+      "job_type": "Internship",
+      "state": "Selangor",
+      "city": "Shah Alam",
+      "salary_min": 700.00,
+      "salary_max": 1200.00,
+      "deadline": "2026-07-31T00:00:00Z",
+      "is_active": true,
+      "created_at": "2026-06-15T15:30:00Z"
+    }
+  ],
+  "pagination": {
+    "page": 1,
+    "limit": 10,
+    "total_records": 45,
+    "total_pages": 5
   }
-]
+}
 ```
 
 #### Error Responses
